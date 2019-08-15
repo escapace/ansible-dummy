@@ -1,0 +1,5 @@
+#localhost ansible_connection=local
+
+[test]
+centos image="escapace/test-centos:7"
+
