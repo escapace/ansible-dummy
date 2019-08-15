@@ -1,0 +1,35 @@
+---
+
+- name: set dummy module configuration
+  copy:
+    content: "dummy"
+    dest: "/etc/modules-load.d/dummy.conf"
+    mode: 0644
+    owner: root
+    group: root
+
+- name: set dummy module configuration
+  copy:
+    content: "options dummy numdummies={{ dummy_number }}"
+    dest: "/etc/modprobe.d/dummy.conf"
+    mode: 0644
+    owner: root
+    group: root
+
+- name: add the dummy module
+  modprobe:
+    name: dummy
+    state: present
+    params: "numdummies={{ dummy_number }}"
+
+- name: ensure network-scripts directory exists
+  file:
+    path: /etc/sysconfig/network-scripts
+    state: directory
+    mode: 0755
+    owner: root
+    group: root
+
+- include_tasks: network.yml
+  with_sequence: start=0 end={{ dummy_number - 1 }}
+

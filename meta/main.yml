@@ -1,0 +1,17 @@
+galaxy_info:
+  description: dummy network interface
+  issue_tracker_url: https://github.com/escapace/ansible-dummy/issues
+  license: Apache-2.0
+  min_ansible_version: 2.4
+  github_branch: master
+  platforms:
+  - name: EL
+    versions:
+    - 7
+
+  galaxy_tags:
+  - escapace
+  - dummy
+
+dependencies:
+   - { role: escapace.ferm }

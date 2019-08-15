@@ -1,0 +1,28 @@
+@def $DUMMY{{ item }}_DEV = dummy{{ item }};
+@def $DUMMY{{ item }}_V4_CIDR={{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}/32;
+@def $DUMMY{{ item }}_V6_CIDR={{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128;
+
+domain ip table filter {
+    chain INPUT {
+        jump DUMMY-ISOLATION;
+    }
+
+    chain DUMMY-ISOLATION {
+        interface $DEFAULT_V4_DEV daddr $DUMMY{{ item }}_V4_CIDR DROP;
+
+        RETURN;
+    }
+}
+
+domain ip6 table filter {
+    chain INPUT {
+        jump DUMMY-ISOLATION;
+    }
+
+    chain DUMMY-ISOLATION {
+        interface $DEFAULT_V6_DEV daddr $DUMMY{{ item }}_V6_CIDR DROP;
+
+        RETURN;
+    }
+}
+
