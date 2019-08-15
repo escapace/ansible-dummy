@@ -21,6 +21,7 @@
     name: dummy
     state: present
     params: "numdummies={{ dummy_number }}"
+  when: not dummy_role_debug
 
 - name: ensure network-scripts directory exists
   file:
