@@ -1,20 +1,43 @@
 ---
 
-
-- name: dummy interface configuration
+- name: dummy{{ item }} interface configuration
   template:
     src: templates/ifcfg.j2
     dest: /etc/sysconfig/network-scripts/ifcfg-dummy{{ item }}
     owner: root
     group: root
     mode: 0644
-  register: dummy_network_script
+  register: dummy_ifcfg
 
-- name: ferm configuration
+- name: dummy{{ item }} service configuration
+  template:
+    src: templates/dummy@.service
+    dest: /etc/systemd/system/dummy{{ item }}.service
+    owner: root
+    group: root
+    mode: 0644
+  register: dummy_service
+
+- name: dummy{{ item }} ferm variables
+  template: src=templates/ferm-vars.j2 dest=/etc/ferm/vars.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
+  notify:
+    - ferm restart
+
+- name: dummy{{ item }} ferm configuration
   template: src=templates/ferm.j2 dest=/etc/ferm/ferm.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
   notify:
     - ferm restart
 
-- name: dummy restart
-  command: bash -c "ifdown dummy{{ item }} && ifup dummy{{ item }}"
-  when: (dummy_role_debug|bool == false) and dummy_network_script.changed
+- name: dummy{{ item }} enable
+  systemd:
+    name: dummy{{ item }}
+    enabled: yes
+    daemon_reload: yes
+
+- name: dummy{{ item }} restart
+  systemd:
+    name: dummy{{ item }}
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+  when: (not dummy_role_debug|bool) and (dummy_ifcfg.changed or dummy_service.changed)

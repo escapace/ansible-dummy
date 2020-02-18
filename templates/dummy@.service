@@ -1,0 +1,12 @@
+[Unit]
+Description=Dummy network interface for dummy{{ item }}
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=sh -c "/sbin/ip link add dummy{{ item }} type dummy || true && /sbin/ip link set dummy{{ item }} up && /sbin/ip a a {{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}/32 dev dummy{{ item }} && /sbin/ip -6 a a {{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128 dev dummy{{ item }}"
+ExecStop=sh -c "/sbin/ip link del dummy{{ item }} || true"
+
+[Install]
+WantedBy=multi-user.target
