@@ -1,5 +1,14 @@
 ---
 
+# - name: install network-scripts
+#   yum:
+#     name: "{{ packages }}"
+#     state: present
+#     update_cache: yes
+#   vars:
+#     packages:
+#      - network-scripts
+
 - name: set dummy module configuration
   copy:
     content: "dummy"
@@ -33,4 +42,3 @@
 
 - include_tasks: network.yml
   with_sequence: start=0 end={{ dummy_number - 1 }}
-

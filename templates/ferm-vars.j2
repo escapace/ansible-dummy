@@ -1,0 +1,3 @@
+@def $DUMMY{{ item }}_DEV = dummy{{ item }};
+@def $DUMMY{{ item }}_V4_CIDR={{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}/32;
+@def $DUMMY{{ item }}_V6_CIDR={{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128;
