@@ -1,0 +1,8 @@
+---
+- name: Converge
+  hosts: all
+  vars:
+    ferm_role_debug: true
+    dummy_role_debug: true
+  roles:
+    - role: escapace.dummy
