@@ -17,6 +17,13 @@
     owner: root
     group: root
 
+- name: enable systemd-modules-load.service
+  service:
+    name: systemd-modules-load
+    state: restarted
+    enabled: yes
+  when: not dummy_role_debug
+
 - name: set dummy module configuration
   copy:
     content: "options dummy numdummies={{ dummy_number }}"
