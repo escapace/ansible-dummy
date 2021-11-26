@@ -47,5 +47,16 @@
     owner: root
     group: root
 
+- name: kresd.conf files
+  template:
+    src: "kresd-network-dummy.conf.j2"
+    dest: /etc/knot-resolver/kresd.conf.d/410-network-dummy.conf
+    owner: root
+    group: knot-resolver
+    mode: 0640
+  when: kresd_threads is number and kresd_max_threads is number
+  notify:
+    - kresd restart
+
 - include_tasks: network.yml
   with_sequence: start=0 end={{ dummy_number - 1 }}
