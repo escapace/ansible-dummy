@@ -47,6 +47,12 @@
     owner: root
     group: root
 
+- name: check if kresd.conf.d exists
+  ansible.builtin.stat:
+    path: /etc/knot-resolver/kresd.conf.d/
+  register: dummy_kresd_conf_d
+  changed_when: false
+
 - name: kresd.conf files
   template:
     src: "kresd-network-dummy.conf.j2"
@@ -54,9 +60,7 @@
     owner: root
     group: knot-resolver
     mode: 0640
-  when: kresd_threads is number and kresd_max_threads is number
-  notify:
-    - kresd restart
+  when: dummy_kresd_conf_d.stat.isdir is defined and dummy_kresd_conf_d.stat.isdir
 
 - include_tasks: network.yml
   with_sequence: start=0 end={{ dummy_number - 1 }}
