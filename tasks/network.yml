@@ -12,7 +12,7 @@
 - name: dummy{{ item }} service configuration
   template:
     src: templates/dummy@.service
-    dest: /etc/systemd/system/dummy{{ item }}.service
+    dest: /usr/lib/systemd/system/dummy{{ item }}.service
     owner: root
     group: root
     mode: 0644
