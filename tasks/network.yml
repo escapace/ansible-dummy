@@ -22,7 +22,7 @@
   template: src=templates/ferm-vars.j2 dest=/etc/ferm/vars.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
 
 - name: dummy{{ item }} ferm configuration
-  template: src=templates/ferm.j2 dest=/etc/ferm/ferm.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
+  template: src=templates/ferm.j2 dest=/etc/ferm/ferm.d/9000-dummy{{ item }}-isolation.conf owner=root group=root mode=0600
 
 - name: dummy{{ item }} enable
   systemd:
