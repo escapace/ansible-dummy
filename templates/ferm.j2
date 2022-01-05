@@ -1,5 +1,5 @@
 domain ip table filter {
-    chain INPUT {
+    chain (INPUT FORWARD) {
         jump DUMMY-ISOLATION;
     }
 
@@ -11,7 +11,7 @@ domain ip table filter {
 }
 
 domain ip6 table filter {
-    chain INPUT {
+    chain (INPUT FORWARD) {
         jump DUMMY-ISOLATION;
     }
 
