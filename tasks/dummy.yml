@@ -1,14 +1,5 @@
 ---
 
-# - name: install network-scripts
-#   yum:
-#     name: "{{ packages }}"
-#     state: present
-#     update_cache: yes
-#   vars:
-#     packages:
-#      - network-scripts
-
 - name: set dummy module configuration
   copy:
     content: "dummy"
@@ -16,12 +7,13 @@
     mode: 0644
     owner: root
     group: root
+  when: not dummy_role_debug
 
 - name: enable systemd-modules-load.service
   service:
     name: systemd-modules-load
     state: restarted
-    enabled: yes
+    enabled: true
   when: not dummy_role_debug
 
 - name: set dummy module configuration
@@ -31,6 +23,7 @@
     mode: 0644
     owner: root
     group: root
+  when: not dummy_role_debug
 
 - name: add the dummy module
   modprobe:
@@ -38,14 +31,6 @@
     state: present
     params: "numdummies={{ dummy_number }}"
   when: not dummy_role_debug
-
-- name: ensure network-scripts directory exists
-  file:
-    path: /etc/sysconfig/network-scripts
-    state: directory
-    mode: 0755
-    owner: root
-    group: root
 
 - name: check if kresd.conf.d exists
   ansible.builtin.stat:

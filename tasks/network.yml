@@ -1,14 +1,5 @@
 ---
 
-- name: dummy{{ item }} interface configuration
-  template:
-    src: templates/ifcfg.j2
-    dest: /etc/sysconfig/network-scripts/ifcfg-dummy{{ item }}
-    owner: root
-    group: root
-    mode: 0644
-  register: dummy_ifcfg
-
 - name: dummy{{ item }} service configuration
   template:
     src: templates/dummy@.service
@@ -17,6 +8,7 @@
     group: root
     mode: 0644
   register: dummy_service
+  when: not dummy_role_debug|bool
 
 - name: dummy{{ item }} ferm variables
   template: src=templates/ferm-vars.j2 dest=/etc/ferm/vars.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
@@ -27,13 +19,14 @@
 - name: dummy{{ item }} enable
   systemd:
     name: dummy{{ item }}
-    enabled: yes
-    daemon_reload: yes
+    enabled: true
+    daemon_reload: true
+  when: not dummy_role_debug|bool
 
 - name: dummy{{ item }} restart
   systemd:
     name: dummy{{ item }}
     state: restarted
-    enabled: yes
-    daemon_reload: yes
+    enabled: true
+    daemon_reload: true
   when: (not dummy_role_debug|bool) and (dummy_ifcfg.changed or dummy_service.changed)

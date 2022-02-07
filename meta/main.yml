@@ -9,13 +9,13 @@ galaxy_info:
   min_ansible_version: 2.10
   github_branch: trunk
   platforms:
-  - name: EL
-    versions:
-    - 9
+    - name: EL
+      versions:
+        - 9
 
   galaxy_tags:
-  - escapace
-  - dummy
+    - escapace
+    - dummy
 
 dependencies:
-   - { role: escapace.ferm }
+  - { role: escapace.ferm }
