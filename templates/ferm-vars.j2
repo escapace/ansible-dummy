@@ -1,4 +1,4 @@
 @def $DUMMY{{ item }}_DEV = dummy{{ item }};
-@def $DUMMY{{ item }}_V4_CIDR={{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}/32;
-@def $DUMMY{{ item }}_V6_CIDR={{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128;
-@def $DUMMY{{ item }}_CIDR=({{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}/32 {{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128);
+@def $DUMMY{{ item }}_V4_CIDR={{ dummy_ipv4_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}/32;
+@def $DUMMY{{ item }}_V6_CIDR={{ dummy_ipv6_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}/128;
+@def $DUMMY{{ item }}_CIDR=({{ dummy_ipv4_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}/32 {{ dummy_ipv6_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}/128);

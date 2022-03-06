@@ -1,8 +1,8 @@
 DEVICE=dummy{{ item }}
 BOOTPROTO=none
 ONBOOT=yes
-IPADDR={{ dummy_ipv4_cidr | ipaddr('network') | ipmath(item | int + 1) }}
+IPADDR={{ dummy_ipv4_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}
 NETMASK=255.255.255.255
 IPV6INIT=yes
-IPV6ADDR={{ dummy_ipv6_cidr | ipaddr('network') | ipmath(item | int + 1) }}/128
+IPV6ADDR={{ dummy_ipv6_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(item | int + 1) }}/128
 NM_CONTROLLED=no
