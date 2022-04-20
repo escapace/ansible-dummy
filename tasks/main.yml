@@ -1,7 +1,7 @@
 ---
 
 - name: check dummy variables
-  assert:
+  ansible.builtin.assert:
     that:
       - dummy_number is number and dummy_number > 0
     quiet: true
