@@ -1,7 +1,7 @@
 ---
 
 - name: set dummy module configuration
-  copy:
+  ansible.builtin.copy:
     content: "dummy"
     dest: "/etc/modules-load.d/dummy.conf"
     mode: 0644
@@ -10,14 +10,14 @@
   when: not dummy_role_debug
 
 - name: enable systemd-modules-load.service
-  service:
+  ansible.builtin.service:
     name: systemd-modules-load
     state: restarted
     enabled: true
   when: not dummy_role_debug
 
 - name: set dummy module configuration
-  copy:
+  ansible.builtin.copy:
     content: "options dummy numdummies={{ dummy_number }}"
     dest: "/etc/modprobe.d/dummy.conf"
     mode: 0644
@@ -26,7 +26,7 @@
   when: not dummy_role_debug
 
 - name: add the dummy module
-  modprobe:
+  community.general.modprobe:
     name: dummy
     state: present
     params: "numdummies={{ dummy_number }}"
@@ -39,7 +39,7 @@
   changed_when: false
 
 - name: kresd.conf files
-  template:
+  ansible.builtin.template:
     src: "kresd-network-dummy.conf.j2"
     dest: /etc/knot-resolver/kresd.conf.d/410-network-dummy.conf
     owner: root
