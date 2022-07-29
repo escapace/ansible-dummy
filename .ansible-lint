@@ -1,5 +1,8 @@
 ---
 
 skip_list:
-  - '503'
-  - '305'
+  - command-instead-of-shell
+  - experimental
+  - ignore-errors
+  - no-changed-when
+  - schema
