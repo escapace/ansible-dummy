@@ -47,5 +47,5 @@
     mode: 0640
   when: dummy_kresd_conf_d.stat.isdir is defined and dummy_kresd_conf_d.stat.isdir
 
-- include_tasks: network.yml
+- ansible.builtin.include_tasks: network.yml
   with_sequence: start=0 end={{ dummy_number - 1 }}
