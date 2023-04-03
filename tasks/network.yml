@@ -11,10 +11,20 @@
   when: not dummy_role_debug|bool
 
 - name: dummy{{ item }} ferm variables
-  ansible.builtin.template: src=templates/ferm-vars.j2 dest=/etc/ferm/vars.d/1000-dummy{{ item }}.conf owner=root group=root mode=0600
+  ansible.builtin.template:
+    src: templates/ferm-vars.j2
+    dest: "/etc/ferm/vars.d/1000-dummy{{ item }}.conf"
+    owner: root
+    group: root
+    mode: 0600
 
 - name: dummy{{ item }} ferm configuration
-  ansible.builtin.template: src=templates/ferm.j2 dest=/etc/ferm/ferm.d/9000-dummy{{ item }}-isolation.conf owner=root group=root mode=0600
+  ansible.builtin.template:
+    src: templates/ferm.j2
+    dest: "/etc/ferm/ferm.d/9000-dummy{{ item }}-isolation.conf"
+    owner: root
+    group: root
+    mode: 0600
 
 - name: dummy{{ item }} enable
   ansible.builtin.systemd:
