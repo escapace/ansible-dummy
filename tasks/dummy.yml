@@ -1,10 +1,9 @@
 ---
-
 - name: set dummy module configuration
   ansible.builtin.copy:
-    content: "dummy"
-    dest: "/etc/modules-load.d/dummy.conf"
-    mode: 0644
+    content: dummy
+    dest: /etc/modules-load.d/dummy.conf
+    mode: "0644"
     owner: root
     group: root
   when: not dummy_role_debug
@@ -18,9 +17,9 @@
 
 - name: set dummy module configuration
   ansible.builtin.copy:
-    content: "options dummy numdummies={{ dummy_number }}"
-    dest: "/etc/modprobe.d/dummy.conf"
-    mode: 0644
+    content: options dummy numdummies={{ dummy_number }}
+    dest: /etc/modprobe.d/dummy.conf
+    mode: "0644"
     owner: root
     group: root
   when: not dummy_role_debug
@@ -29,7 +28,7 @@
   community.general.modprobe:
     name: dummy
     state: present
-    params: "numdummies={{ dummy_number }}"
+    params: numdummies={{ dummy_number }}
   when: not dummy_role_debug
 
 - name: check if kresd.conf.d exists
@@ -40,11 +39,11 @@
 
 - name: kresd.conf files
   ansible.builtin.template:
-    src: "kresd-network-dummy.conf.j2"
+    src: kresd-network-dummy.conf.j2
     dest: /etc/knot-resolver/kresd.conf.d/410-network-dummy.conf
     owner: root
     group: knot-resolver
-    mode: 0640
+    mode: "0640"
   when: dummy_kresd_conf_d.stat.isdir is defined and dummy_kresd_conf_d.stat.isdir
 
 - ansible.builtin.include_tasks: network.yml
