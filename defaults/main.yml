@@ -1,5 +1,4 @@
 ---
-
 dummy_number: 1
 dummy_ipv4_cidr: 10.254.254.1/24
 dummy_ipv6_cidr: fdb9:e835:7db0:3056::/64
