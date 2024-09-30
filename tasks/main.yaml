@@ -5,5 +5,5 @@
       - dummy_number is number and dummy_number > 0
     quiet: true
 
-- ansible.builtin.include_tasks: dummy.yml
+- ansible.builtin.include_tasks: dummy.yaml
   when: ansible_os_family == "RedHat"
