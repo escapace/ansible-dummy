@@ -31,20 +31,20 @@
     params: numdummies={{ dummy_number }}
   when: not dummy_role_debug
 
-- name: check if kresd.conf.d exists
+- name: check if knot-resolver config.d exists
   ansible.builtin.stat:
-    path: /etc/knot-resolver/kresd.conf.d/
-  register: dummy_kresd_conf_d
+    path: /etc/knot-resolver/config.d
+  register: dummy_kresd_config_d
   changed_when: false
 
-- name: kresd.conf files
+- name: knot-resolver files
   ansible.builtin.template:
-    src: kresd-network-dummy.conf.j2
-    dest: /etc/knot-resolver/kresd.conf.d/410-network-dummy.conf
+    src: kresd-network-dummy.lua.j2
+    dest: /etc/knot-resolver/config.d/410-network-dummy.lua
     owner: root
     group: knot-resolver
     mode: '0640'
-  when: dummy_kresd_conf_d.stat.isdir is defined and dummy_kresd_conf_d.stat.isdir
+  when: dummy_kresd_config_d.stat.isdir is defined and dummy_kresd_config_d.stat.isdir
 
 - ansible.builtin.include_tasks: network.yaml
   with_sequence: start=0 end={{ dummy_number - 1 }}
