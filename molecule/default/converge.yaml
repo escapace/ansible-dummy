@@ -1,9 +1,17 @@
 ---
 - name: converge
   hosts: all
-  vars:
-    dummy_role_debug: true
   pre_tasks:
+    - name: enable epel for role prerequisites
+      ansible.builtin.package:
+        name: epel-release
+        state: present
+
+    - name: install role prerequisites
+      ansible.builtin.package:
+        name: systemd-networkd
+        state: present
+
     - name: create optional ferm integration directories
       ansible.builtin.file:
         path: "{{ item }}"

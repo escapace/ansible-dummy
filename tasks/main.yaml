@@ -4,10 +4,7 @@
     that:
       - dummy_number is integer
       - dummy_number > 0
-      - dummy_role_debug is boolean
-    fail_msg: >-
-      dummy_number must be a positive integer and dummy_role_debug must be a
-      boolean.
+    fail_msg: dummy_number must be a positive integer.
     quiet: true
 
 - name: validate dummy address pools

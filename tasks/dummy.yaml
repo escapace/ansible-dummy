@@ -2,7 +2,6 @@
 - name: gather package state
   ansible.builtin.package_facts:
     manager: auto
-  when: not dummy_role_debug
 
 - name: require systemd-networkd package
   ansible.builtin.assert:
@@ -11,7 +10,6 @@
     fail_msg: >-
       ansible-dummy requires the systemd-networkd package on the managed host.
     quiet: true
-  when: not dummy_role_debug
 
 - name: create systemd-networkd configuration directory
   ansible.builtin.file:

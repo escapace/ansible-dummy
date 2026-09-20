@@ -12,7 +12,6 @@ configured address pools. Interface names start at `dummy0` and continue through
 dummy_number: 1
 dummy_ipv4_cidr: 10.254.254.1/24
 dummy_ipv6_cidr: fdb9:e835:7db0:3056::/64
-dummy_role_debug: false
 ```
 
 `dummy_number` must be a positive integer. Both address pools must contain enough
@@ -23,9 +22,8 @@ The managed host must have the `systemd-networkd` package installed. The role
 checks for the package but does not enable, start, or reload
 `systemd-networkd.service`. When network configuration changes, the role
 notifies a handler that runs `networkctl reconfigure` at the normal handler
-point near the end of the play if `systemd-networkd.service` is active. In debug
-mode, the role renders and checks its configuration without changing live
-network or service state.
+point near the end of the play if `systemd-networkd.service` is active. A
+stopped or unavailable service remains stopped.
 
 ## Optional Ferm integration
 
