@@ -1,0 +1,40 @@
+---
+- name: verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: read rendered dummy netdev
+      ansible.builtin.slurp:
+        src: /etc/systemd/network/80-dummy0.netdev
+      register: dummy_netdev
+
+    - name: read rendered dummy network
+      ansible.builtin.slurp:
+        src: /etc/systemd/network/80-dummy0.network
+      register: dummy_network
+
+    - name: read rendered ferm variables
+      ansible.builtin.slurp:
+        src: /etc/ferm/vars.d/1000-dummy0.conf
+      register: dummy_ferm_variables
+
+    - name: read rendered ferm isolation policy
+      ansible.builtin.slurp:
+        src: /etc/ferm/ferm.d/9000-dummy0-isolation.conf
+      register: dummy_ferm_policy
+
+    - name: verify rendered configuration
+      ansible.builtin.assert:
+        that:
+          - "'Name=dummy0' in (dummy_netdev.content | b64decode)"
+          - "'Kind=dummy' in (dummy_netdev.content | b64decode)"
+          - "'Address=10.254.254.1/32' in (dummy_network.content | b64decode)"
+          - >-
+            'Address=fdb9:e835:7db0:3056::1/128' in
+            (dummy_network.content | b64decode)
+          - >-
+            '$DUMMY0_V4_CIDR=10.254.254.1/32' in
+            (dummy_ferm_variables.content | b64decode)
+          - >-
+            'daddr $DUMMY0_V4_CIDR DROP' in
+            (dummy_ferm_policy.content | b64decode)

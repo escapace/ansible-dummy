@@ -1,9 +1,34 @@
 ---
-- name: check dummy variables
+- name: validate dummy interface count
   ansible.builtin.assert:
     that:
-      - dummy_number is number and dummy_number > 0
+      - dummy_number is integer
+      - dummy_number > 0
+      - dummy_role_debug is boolean
+    fail_msg: >-
+      dummy_number must be a positive integer and dummy_role_debug must be a
+      boolean.
     quiet: true
 
-- ansible.builtin.include_tasks: dummy.yaml
-  when: ansible_os_family == "RedHat"
+- name: validate dummy address pools
+  ansible.builtin.assert:
+    that:
+      - (dummy_ipv4_cidr | ansible.utils.ipaddr('ipv4')) != false
+      - (dummy_ipv6_cidr | ansible.utils.ipaddr('ipv6')) != false
+    fail_msg: >-
+      dummy_ipv4_cidr must be an IPv4 CIDR and dummy_ipv6_cidr must be an IPv6
+      CIDR.
+    quiet: true
+
+- name: validate dummy address pool capacities
+  ansible.builtin.assert:
+    that:
+      - (dummy_ipv4_cidr | ansible.utils.ipaddr('size') | int) >= dummy_number + 2
+      - (dummy_ipv6_cidr | ansible.utils.ipaddr('size') | int) > dummy_number
+    fail_msg: >-
+      The configured address pools do not contain enough addresses for
+      dummy_number interfaces.
+    quiet: true
+
+- name: configure dummy interfaces
+  ansible.builtin.include_tasks: dummy.yaml

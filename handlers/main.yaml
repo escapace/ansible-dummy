@@ -1,0 +1,48 @@
+---
+- name: dummy check systemd-networkd is active
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemctl
+      - is-active
+      - --quiet
+      - systemd-networkd.service
+  register: dummy_systemd_networkd_active
+  changed_when: false
+  failed_when: false
+  when: not dummy_role_debug
+  listen: dummy reconfigure systemd-networkd
+
+- name: dummy reconfigure active systemd-networkd
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/networkctl
+      - reconfigure
+      - "dummy{{ item }}"
+  loop: "{{ range(0, dummy_number) | list }}"
+  changed_when: true
+  when:
+    - not dummy_role_debug
+    - dummy_systemd_networkd_active.rc | default(1) == 0
+  listen: dummy reconfigure systemd-networkd
+
+- name: dummy check ferm is active
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/systemctl
+      - is-active
+      - --quiet
+      - ferm.service
+  register: dummy_ferm_active
+  changed_when: false
+  failed_when: false
+  when: not dummy_role_debug
+  listen: dummy restart ferm
+
+- name: dummy restart active ferm
+  ansible.builtin.systemd_service:
+    name: ferm.service
+    state: restarted
+  when:
+    - not dummy_role_debug
+    - dummy_ferm_active.rc | default(1) == 0
+  listen: dummy restart ferm

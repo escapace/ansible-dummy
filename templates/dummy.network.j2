@@ -1,0 +1,13 @@
+# Managed by Ansible.
+[Match]
+Name=dummy{{ dummy_index }}
+
+[Link]
+RequiredForOnline=yes
+
+[Network]
+Address={{ dummy_ipv4_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(dummy_index | int + 1) }}/32
+Address={{ dummy_ipv6_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(dummy_index | int + 1) }}/128
+DHCP=no
+IPv6AcceptRA=no
+LinkLocalAddressing=no

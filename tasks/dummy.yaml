@@ -1,50 +1,38 @@
 ---
-- name: set dummy module configuration
-  ansible.builtin.copy:
-    content: dummy
-    dest: /etc/modules-load.d/dummy.conf
-    mode: "0644"
+- name: gather package state
+  ansible.builtin.package_facts:
+    manager: auto
+  when: not dummy_role_debug
+
+- name: require systemd-networkd package
+  ansible.builtin.assert:
+    that:
+      - "'systemd-networkd' in ansible_facts.get('packages', {})"
+    fail_msg: >-
+      ansible-dummy requires the systemd-networkd package on the managed host.
+    quiet: true
+  when: not dummy_role_debug
+
+- name: create systemd-networkd configuration directory
+  ansible.builtin.file:
+    path: /etc/systemd/network
+    state: directory
     owner: root
     group: root
-  when: not dummy_role_debug
+    mode: "0755"
 
-- name: enable systemd-modules-load.service
-  ansible.builtin.service:
-    name: systemd-modules-load
-    state: restarted
-    enabled: true
-  when: not dummy_role_debug
-
-- name: set dummy module configuration
-  ansible.builtin.copy:
-    content: options dummy numdummies={{ dummy_number }}
-    dest: /etc/modprobe.d/dummy.conf
-    mode: "0644"
-    owner: root
-    group: root
-  when: not dummy_role_debug
-
-- name: add the dummy module
-  community.general.modprobe:
-    name: dummy
-    state: present
-    params: numdummies={{ dummy_number }}
-  when: not dummy_role_debug
-
-- name: check if knot-resolver config.d exists
+- name: check for ferm rule configuration directory
   ansible.builtin.stat:
-    path: /etc/knot-resolver/config.d
-  register: dummy_kresd_config_d
-  changed_when: false
+    path: /etc/ferm/ferm.d
+  register: dummy_ferm_rule_directory
 
-- name: knot-resolver files
-  ansible.builtin.template:
-    src: kresd-network-dummy.lua.j2
-    dest: /etc/knot-resolver/config.d/410-network-dummy.lua
-    owner: root
-    group: knot-resolver
-    mode: "0640"
-  when: dummy_kresd_config_d.stat.isdir is defined and dummy_kresd_config_d.stat.isdir
+- name: check for ferm variable configuration directory
+  ansible.builtin.stat:
+    path: /etc/ferm/vars.d
+  register: dummy_ferm_variable_directory
 
-- ansible.builtin.include_tasks: network.yaml
-  with_sequence: start=0 end={{ dummy_number - 1 }}
+- name: configure each dummy interface
+  ansible.builtin.include_tasks: network.yaml
+  loop: "{{ range(0, dummy_number) | list }}"
+  loop_control:
+    loop_var: dummy_index

@@ -4,7 +4,7 @@ domain ip table filter {
     }
 
     chain DUMMY-ISOLATION {
-        interface $DEFAULT_V4_DEV daddr $DUMMY{{ item }}_V4_CIDR DROP;
+        interface $DEFAULT_V4_DEV daddr $DUMMY{{ dummy_index }}_V4_CIDR DROP;
 
         RETURN;
     }
@@ -16,7 +16,7 @@ domain ip6 table filter {
     }
 
     chain DUMMY-ISOLATION {
-        interface $DEFAULT_V6_DEV daddr $DUMMY{{ item }}_V6_CIDR DROP;
+        interface $DEFAULT_V6_DEV daddr $DUMMY{{ dummy_index }}_V6_CIDR DROP;
 
         RETURN;
     }
