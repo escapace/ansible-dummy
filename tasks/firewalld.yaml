@@ -1,0 +1,72 @@
+---
+- name: check for firewalld policy configuration directory
+  ansible.builtin.stat:
+    path: /etc/firewalld/policies
+  register: dummy_firewalld_policy_directory
+
+- name: check installed firewalld validator
+  ansible.builtin.stat:
+    path: /usr/bin/firewall-offline-cmd
+  register: dummy_firewalld_validator
+  when: dummy_firewalld_policy_directory.stat.isdir | default(false)
+
+- name: require a usable firewalld integration
+  ansible.builtin.assert:
+    that: dummy_firewalld_validator.stat.executable | default(false)
+    fail_msg: the firewalld policy directory exists but firewall-offline-cmd is unavailable
+    quiet: true
+  when: dummy_firewalld_policy_directory.stat.isdir | default(false)
+
+- name: validate existing firewalld configuration before writes
+  ansible.builtin.command:
+    argv: [firewall-offline-cmd, --system-config=/etc/firewalld, --check-config]
+  register: dummy_firewalld_preflight
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    dummy_firewalld_preflight.rc != 0 or
+    dummy_firewalld_preflight.stdout | trim | length > 0 or
+    dummy_firewalld_preflight.stderr | trim | length > 0
+  when: dummy_firewalld_policy_directory.stat.isdir | default(false)
+
+- name: require existing dummy isolation ingress zones before writes
+  ansible.builtin.command:
+    argv:
+      - firewall-offline-cmd
+      - --system-config=/etc/firewalld
+      - "--info-zone={{ item }}"
+  loop: "{{ dummy_isolation_ingress_zones }}"
+  register: dummy_firewalld_zone_validation
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    dummy_firewalld_zone_validation.rc != 0 or
+    dummy_firewalld_zone_validation.stderr | trim | length > 0
+  when: dummy_firewalld_policy_directory.stat.isdir | default(false)
+
+- name: configure dummy isolation policies
+  ansible.builtin.template:
+    src: dummy-isolation.xml.j2
+    dest: "/etc/firewalld/policies/{{ dummy_isolation_policy.name }}.xml"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ dummy_isolation_policies }}"
+  loop_control:
+    loop_var: dummy_isolation_policy
+  when:
+    - dummy_firewalld_policy_directory.stat.isdir | default(false)
+    - dummy_isolation_ingress_zones | length > 0
+  notify: dummy reload firewalld
+
+- name: remove dummy isolation policies when disabled
+  ansible.builtin.file:
+    path: "/etc/firewalld/policies/{{ dummy_isolation_policy.name }}.xml"
+    state: absent
+  loop: "{{ dummy_isolation_policies }}"
+  loop_control:
+    loop_var: dummy_isolation_policy
+  when:
+    - dummy_firewalld_policy_directory.stat.isdir | default(false)
+    - dummy_isolation_ingress_zones | length == 0
+  notify: dummy reload firewalld

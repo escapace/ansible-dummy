@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- {{ ansible_managed }} -->
+<!-- Destination-scoped denials precede ordinary host-access policies. -->
+<policy target="CONTINUE" priority="-1000">
+{% for zone in dummy_isolation_ingress_zones %}
+  <ingress-zone name="{{ zone }}"/>
+{% endfor %}
+  <egress-zone name="{{ dummy_isolation_policy.egress_zone }}"/>
+{% for index in range(0, dummy_number) %}
+  <rule family="ipv4">
+    <destination address="{{ dummy_ipv4_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(index + 1) }}/32"/>
+    <drop/>
+  </rule>
+  <rule family="ipv6">
+    <destination address="{{ dummy_ipv6_cidr | ansible.utils.ipaddr('network') | ansible.utils.ipmath(index + 1) }}/128"/>
+    <drop/>
+  </rule>
+{% endfor %}
+</policy>

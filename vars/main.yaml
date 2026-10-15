@@ -1,0 +1,6 @@
+---
+dummy_isolation_policies:
+  - name: dummy-deny-host
+    egress_zone: HOST
+  - name: dummy-deny-fwd
+    egress_zone: ANY

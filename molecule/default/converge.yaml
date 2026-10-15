@@ -9,16 +9,15 @@
 
     - name: install role prerequisites
       ansible.builtin.package:
-        name: systemd-networkd
+        name:
+          - systemd-networkd
+          - firewalld
         state: present
 
-    - name: create optional ferm integration directories
+    - name: create optional firewalld policy directory
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: /etc/firewalld/policies
         state: directory
         mode: "0755"
-      loop:
-        - /etc/ferm/ferm.d
-        - /etc/ferm/vars.d
   roles:
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"

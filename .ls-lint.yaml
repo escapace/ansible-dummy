@@ -9,5 +9,7 @@ ignore:
   - .github
   - .ls-lint.yaml
   - .venv
+  # Ansible requires this exact filename for role argument validation.
+  - meta/argument_specs.yaml
   - node_modules
   - vendor

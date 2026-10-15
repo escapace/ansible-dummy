@@ -1,4 +1,32 @@
 ---
+- name: inspect existing networkd configuration directory
+  ansible.builtin.stat:
+    path: /etc/systemd/network
+  register: dummy_network_directory
+
+- name: find existing dummy interface configuration
+  ansible.builtin.find:
+    paths: /etc/systemd/network
+    patterns: '^80-dummy[0-9]+\.(netdev|network)$'
+    use_regex: true
+    file_type: any
+  register: dummy_existing_network_files
+  when: dummy_network_directory.stat.isdir | default(false)
+
+- name: refuse unsafe dummy interface count reductions
+  ansible.builtin.assert:
+    that: >-
+      (item.path | basename | split('.') | first | replace('80-dummy', '') | int)
+      < dummy_number
+    fail_msg: >-
+      Cannot reduce dummy_number while {{ item.path }} remains. Remove the
+      obsolete dummy interface and its networkd files before reducing the count;
+      otherwise its addresses would lose their isolation rules.
+    quiet: true
+  loop: "{{ dummy_existing_network_files.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path }}"
+
 - name: gather package state
   ansible.builtin.package_facts:
     manager: auto
@@ -11,6 +39,9 @@
       ansible-dummy requires the systemd-networkd package on the managed host.
     quiet: true
 
+- name: configure optional firewalld isolation
+  ansible.builtin.include_tasks: firewalld.yaml
+
 - name: create systemd-networkd configuration directory
   ansible.builtin.file:
     path: /etc/systemd/network
@@ -18,16 +49,6 @@
     owner: root
     group: root
     mode: "0755"
-
-- name: check for ferm rule configuration directory
-  ansible.builtin.stat:
-    path: /etc/ferm/ferm.d
-  register: dummy_ferm_rule_directory
-
-- name: check for ferm variable configuration directory
-  ansible.builtin.stat:
-    path: /etc/ferm/vars.d
-  register: dummy_ferm_variable_directory
 
 - name: configure each dummy interface
   ansible.builtin.include_tasks: network.yaml

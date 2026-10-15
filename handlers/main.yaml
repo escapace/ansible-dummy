@@ -1,30 +1,37 @@
 ---
+- name: dummy validate assembled firewalld configuration
+  ansible.builtin.command:
+    argv: [firewall-offline-cmd, --system-config=/etc/firewalld, --check-config]
+  register: dummy_firewalld_validation
+  changed_when: false
+  check_mode: false
+  failed_when: >-
+    dummy_firewalld_validation.rc != 0 or
+    dummy_firewalld_validation.stdout | trim | length > 0 or
+    dummy_firewalld_validation.stderr | trim | length > 0
+  when: not ansible_check_mode
+  listen: dummy reload firewalld
+
 - name: dummy gather service facts before runtime effects
   ansible.builtin.service_facts:
   listen:
-    - dummy reconfigure systemd-networkd
-    - dummy restart ferm
+    - dummy reload firewalld
+    - dummy reload systemd-networkd
 
-- name: dummy reconfigure active systemd-networkd
+- name: dummy reload active firewalld synchronously
   ansible.builtin.command:
-    argv:
-      - /usr/bin/networkctl
-      - reconfigure
-      - "dummy{{ item }}"
-  loop: "{{ range(0, dummy_number) | list }}"
+    argv: [firewall-cmd, --reload]
   changed_when: true
-  when: >-
-    (ansible_facts.services | default({}))
-    .get("systemd-networkd.service", {})
-    .get("state") == "running"
-  listen: dummy reconfigure systemd-networkd
+  when:
+    - not ansible_check_mode
+    - (ansible_facts.services | default({})).get('firewalld.service', {}).get('state') == 'running'
+  listen: dummy reload firewalld
 
-- name: dummy restart active ferm
-  ansible.builtin.systemd_service:
-    name: ferm.service
-    state: restarted
-  when: >-
-    (ansible_facts.services | default({}))
-    .get("ferm.service", {})
-    .get("state") == "running"
-  listen: dummy restart ferm
+- name: dummy reload active systemd-networkd
+  ansible.builtin.command:
+    argv: [networkctl, reload]
+  changed_when: true
+  when:
+    - not ansible_check_mode
+    - (ansible_facts.services | default({})).get('systemd-networkd.service', {}).get('state') == 'running'
+  listen: dummy reload systemd-networkd

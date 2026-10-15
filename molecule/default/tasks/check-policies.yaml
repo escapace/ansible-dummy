@@ -1,0 +1,23 @@
+---
+- name: read structured dummy isolation policies
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - "{{ lookup('file', lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') ~ '/files/read-isolation-policies.py') }}"
+  register: dummy_test_policy_state
+  changed_when: false
+
+- name: verify isolation destinations and policy scopes
+  ansible.builtin.assert:
+    that:
+      - (dummy_test_policy_state.stdout | from_json)[item.name].target == 'CONTINUE'
+      - (dummy_test_policy_state.stdout | from_json)[item.name].priority == -1000
+      - (dummy_test_policy_state.stdout | from_json)[item.name].ingress == dummy_expected_ingress
+      - (dummy_test_policy_state.stdout | from_json)[item.name].egress == [item.egress]
+      - (dummy_test_policy_state.stdout | from_json)[item.name].destinations == dummy_expected_destinations
+      - (dummy_test_policy_state.stdout | from_json)[item.name].drops == dummy_expected_destinations | length
+      - (dummy_test_policy_state.stdout | from_json)[item.name].accepts == 0
+  loop:
+    - { name: dummy-deny-host, egress: HOST }
+    - { name: dummy-deny-fwd, egress: ANY }

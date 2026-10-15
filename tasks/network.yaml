@@ -6,8 +6,7 @@
     owner: root
     group: root
     mode: "0644"
-  notify:
-    - dummy reconfigure systemd-networkd
+  notify: dummy reload systemd-networkd
 
 - name: configure network for dummy{{ dummy_index }}
   ansible.builtin.template:
@@ -16,31 +15,4 @@
     owner: root
     group: root
     mode: "0644"
-  notify:
-    - dummy reconfigure systemd-networkd
-
-- name: configure ferm variables for dummy{{ dummy_index }}
-  ansible.builtin.template:
-    src: ferm-vars.j2
-    dest: "/etc/ferm/vars.d/1000-dummy{{ dummy_index }}.conf"
-    owner: root
-    group: root
-    mode: "0600"
-  when:
-    - dummy_ferm_rule_directory.stat.isdir | default(false)
-    - dummy_ferm_variable_directory.stat.isdir | default(false)
-  notify:
-    - dummy restart ferm
-
-- name: configure ferm isolation for dummy{{ dummy_index }}
-  ansible.builtin.template:
-    src: ferm.j2
-    dest: "/etc/ferm/ferm.d/9000-dummy{{ dummy_index }}-isolation.conf"
-    owner: root
-    group: root
-    mode: "0600"
-  when:
-    - dummy_ferm_rule_directory.stat.isdir | default(false)
-    - dummy_ferm_variable_directory.stat.isdir | default(false)
-  notify:
-    - dummy restart ferm
+  notify: dummy reload systemd-networkd

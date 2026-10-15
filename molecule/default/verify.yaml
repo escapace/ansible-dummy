@@ -1,40 +1,377 @@
 ---
-- name: verify
+- name: verify dummy image configuration
   hosts: all
   gather_facts: false
   tasks:
-    - name: read rendered dummy netdev
+    - name: predict changes with actual ansible check mode on the converged image
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python | dirname }}/ansible-playbook"
+          - --inventory
+          - "{{ inventory_dir }}"
+          - --check
+          - "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/check.yaml"
+      delegate_to: localhost
+      changed_when: false
+
+    - name: read default dummy netdev
       ansible.builtin.slurp:
         src: /etc/systemd/network/80-dummy0.netdev
-      register: dummy_netdev
+      register: dummy_test_netdev
 
-    - name: read rendered dummy network
+    - name: read default dummy network
       ansible.builtin.slurp:
         src: /etc/systemd/network/80-dummy0.network
-      register: dummy_network
+      register: dummy_test_network
 
-    - name: read rendered ferm variables
-      ansible.builtin.slurp:
-        src: /etc/ferm/vars.d/1000-dummy0.conf
-      register: dummy_ferm_variables
+    - name: inspect unconfigured dummy interface files
+      ansible.builtin.stat:
+        path: "/etc/systemd/network/80-dummy1.{{ item }}"
+      loop: [netdev, network]
+      register: dummy_test_extra_interfaces
 
-    - name: read rendered ferm isolation policy
-      ansible.builtin.slurp:
-        src: /etc/ferm/ferm.d/9000-dummy0-isolation.conf
-      register: dummy_ferm_policy
-
-    - name: verify rendered configuration
+    - name: verify default addresses and unchanged check-mode state
       ansible.builtin.assert:
         that:
-          - "'Name=dummy0' in (dummy_netdev.content | b64decode)"
-          - "'Kind=dummy' in (dummy_netdev.content | b64decode)"
-          - "'Address=10.254.254.1/32' in (dummy_network.content | b64decode)"
-          - >-
-            'Address=fdb9:e835:7db0:3056::1/128' in
-            (dummy_network.content | b64decode)
-          - >-
-            '$DUMMY0_V4_CIDR=10.254.254.1/32' in
-            (dummy_ferm_variables.content | b64decode)
-          - >-
-            'daddr $DUMMY0_V4_CIDR DROP' in
-            (dummy_ferm_policy.content | b64decode)
+          - "'Name=dummy0' in (dummy_test_netdev.content | b64decode)"
+          - "'Kind=dummy' in (dummy_test_netdev.content | b64decode)"
+          - "'Address=10.254.254.1/32' in (dummy_test_network.content | b64decode)"
+          - "'Address=fdb9:e835:7db0:3056::1/128' in (dummy_test_network.content | b64decode)"
+          - dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
+
+    - name: verify default isolation policies
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [public]
+        dummy_expected_destinations:
+          - [ipv4, 10.254.254.1/32]
+          - [ipv6, fdb9:e835:7db0:3056::1/128]
+
+    - name: reject invalid input before changing configuration
+      ansible.builtin.include_tasks: tasks/reject.yaml
+      loop:
+        - { number: 0, error: dummy_number }
+        - { number: true, error: dummy_number }
+        - { number: "2", error: dummy_number }
+        - { ipv4: "2001:db8::/64", error: dummy_ipv4_cidr }
+        - { ipv6: "192.0.2.0/24", error: dummy_ipv6_cidr }
+        - { ipv4: "not-an-address/24", error: dummy_ipv4_cidr }
+        - { ipv4: "192.0.2.0/31", error: configured address pools do not contain enough }
+        - { ipv6: "2001:db8::/128", error: configured address pools do not contain enough }
+        - { zones: public, error: dummy_isolation_ingress_zones }
+        - { zones: [public, public], error: dummy_isolation_ingress_zones }
+        - { zones: [HOST], error: dummy_isolation_ingress_zones }
+        - { zones: [ANY], error: dummy_isolation_ingress_zones }
+        - { zones: ['public"/>'], error: dummy_isolation_ingress_zones }
+        - { zones: ["public\n"], error: dummy_isolation_ingress_zones }
+      loop_control:
+        loop_var: dummy_invalid_case
+
+    - name: inspect the packaged firewalld validator
+      ansible.builtin.stat:
+        path: /usr/bin/firewall-offline-cmd
+      register: dummy_test_validator
+
+    - name: verify incomplete optional integration is rejected before writes
+      block:
+        - name: make the validator unavailable for the rejection test
+          ansible.builtin.file:
+            path: /usr/bin/firewall-offline-cmd
+            mode: "0644"
+
+        - name: reject an incomplete firewalld installation
+          block:
+            - name: try adding interfaces with an unusable validator
+              ansible.builtin.include_role:
+                name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+              vars:
+                dummy_number: 2
+
+            - name: fail if the incomplete integration was accepted
+              ansible.builtin.fail:
+                msg: dummy accepted an incomplete integration
+          rescue:
+            - name: verify the missing validator diagnostic
+              ansible.builtin.assert:
+                that: "'firewall-offline-cmd is unavailable' in ansible_failed_result.msg"
+      always:
+        - name: restore the packaged validator mode
+          ansible.builtin.file:
+            path: /usr/bin/firewall-offline-cmd
+            mode: "{{ dummy_test_validator.stat.mode }}"
+
+    - name: verify rejected integration did not create interface files
+      ansible.builtin.stat:
+        path: "/etc/systemd/network/80-dummy1.{{ item }}"
+      loop: [netdev, network]
+      register: dummy_test_extra_interfaces
+
+    - name: confirm incomplete integration left network configuration unchanged
+      ansible.builtin.assert:
+        that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
+
+    - name: verify rejected inputs and integration left policies unchanged
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [public]
+        dummy_expected_destinations:
+          - [ipv4, 10.254.254.1/32]
+          - [ipv6, fdb9:e835:7db0:3056::1/128]
+
+    - name: reject an undefined ingress zone before writes on every attempt
+      ansible.builtin.include_tasks: tasks/reject.yaml
+      loop:
+        - { number: 2, zones: [missing-zone], error: "INVALID_ZONE" }
+        - { number: 2, zones: [missing-zone], error: "INVALID_ZONE" }
+      loop_control:
+        loop_var: dummy_invalid_case
+
+    - name: reject an invalid installed firewalld configuration on every attempt
+      block:
+        - name: install an invalid foreign policy for the preflight test
+          ansible.builtin.copy:
+            dest: /etc/firewalld/policies/site-invalid-test.xml
+            mode: "0644"
+            content: |
+              <policy target="CONTINUE" priority="-1">
+                <ingress-zone name="missing-zone"/>
+                <egress-zone name="HOST"/>
+              </policy>
+
+        - name: reject the invalid existing configuration before writes
+          ansible.builtin.include_tasks: tasks/reject.yaml
+          loop:
+            - { number: 2, error: "INVALID_ZONE" }
+            - { number: 2, error: "INVALID_ZONE" }
+          loop_control:
+            loop_var: dummy_invalid_case
+      always:
+        - name: remove the invalid foreign test policy
+          ansible.builtin.file:
+            path: /etc/firewalld/policies/site-invalid-test.xml
+            state: absent
+
+    - name: inspect interface files after repeated firewalld rejections
+      ansible.builtin.stat:
+        path: "/etc/systemd/network/80-dummy1.{{ item }}"
+      loop: [netdev, network]
+      register: dummy_test_extra_interfaces
+
+    - name: verify failed attempts did not create interface files
+      ansible.builtin.assert:
+        that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
+
+    - name: verify failed attempts left isolation policies unchanged
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [public]
+        dummy_expected_destinations:
+          - [ipv4, 10.254.254.1/32]
+          - [ipv6, fdb9:e835:7db0:3056::1/128]
+
+    - name: create a foreign policy to test ownership boundaries
+      ansible.builtin.copy:
+        dest: /etc/firewalld/policies/site-test.xml
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          <policy target="CONTINUE" priority="-1">
+            <ingress-zone name="public"/>
+            <egress-zone name="HOST"/>
+            <service name="ssh"/>
+          </policy>
+
+    - name: record the foreign policy checksum
+      ansible.builtin.stat:
+        path: /etc/firewalld/policies/site-test.xml
+      register: dummy_test_foreign_policy
+
+    - name: configure multiple interfaces and ingress zones
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: 2
+        dummy_ipv4_cidr: 192.0.2.0/29
+        dummy_ipv6_cidr: 2001:db8::/126
+        dummy_isolation_ingress_zones: [public, external]
+
+    - name: validate the multi-interface isolation configuration
+      ansible.builtin.meta: flush_handlers
+
+    - name: read the alternate dummy network files
+      ansible.builtin.slurp:
+        src: "/etc/systemd/network/80-dummy{{ item }}.network"
+      loop: [0, 1]
+      register: dummy_test_alternate_networks
+
+    - name: verify address allocation for both interfaces
+      ansible.builtin.assert:
+        that:
+          - "'Address=192.0.2.1/32' in (dummy_test_alternate_networks.results[0].content | b64decode)"
+          - "'Address=2001:db8::1/128' in (dummy_test_alternate_networks.results[0].content | b64decode)"
+          - "'Address=192.0.2.2/32' in (dummy_test_alternate_networks.results[1].content | b64decode)"
+          - "'Address=2001:db8::2/128' in (dummy_test_alternate_networks.results[1].content | b64decode)"
+
+    - name: verify every managed address appears in both policy scopes
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [public, external]
+        dummy_expected_destinations:
+          - [ipv4, 192.0.2.1/32]
+          - [ipv6, 2001:db8::1/128]
+          - [ipv4, 192.0.2.2/32]
+          - [ipv6, 2001:db8::2/128]
+
+    - name: reject count reductions before changing any configuration
+      ansible.builtin.include_tasks: tasks/reject.yaml
+      loop:
+        - number: 1
+          ipv4: 192.0.2.0/29
+          ipv6: 2001:db8::/126
+          zones: [external]
+          error: Cannot reduce dummy_number
+        - number: 1
+          ipv4: 192.0.2.0/29
+          ipv6: 2001:db8::/126
+          zones: [external]
+          error: Cannot reduce dummy_number
+      loop_control:
+        loop_var: dummy_invalid_case
+
+    - name: reject count reductions in actual ansible check mode
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python | dirname }}/ansible-playbook"
+          - --inventory
+          - "{{ inventory_dir }}"
+          - --check
+          - --extra-vars
+          - '{"dummy_number": 1}'
+          - "{{ lookup('env', 'MOLECULE_SCENARIO_DIRECTORY') }}/check.yaml"
+      delegate_to: localhost
+      register: dummy_test_check_reduction
+      changed_when: false
+      failed_when: >-
+        dummy_test_check_reduction.rc != 2 or
+        'Cannot reduce dummy_number' not in
+        (dummy_test_check_reduction.stdout ~ dummy_test_check_reduction.stderr)
+
+    - name: read network configuration after rejected reductions
+      ansible.builtin.slurp:
+        src: "/etc/systemd/network/80-dummy{{ item }}.network"
+      loop: [0, 1]
+      register: dummy_test_preserved_networks
+
+    - name: verify rejected reductions did not change interface configuration
+      ansible.builtin.assert:
+        that: >-
+          dummy_test_preserved_networks.results | map(attribute='content') | list ==
+          dummy_test_alternate_networks.results | map(attribute='content') | list
+
+    - name: verify rejected reductions retained every isolation rule
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [public, external]
+        dummy_expected_destinations:
+          - [ipv4, 192.0.2.1/32]
+          - [ipv6, 2001:db8::1/128]
+          - [ipv4, 192.0.2.2/32]
+          - [ipv6, 2001:db8::2/128]
+
+    - name: disable isolation without changing interface allocation
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: 2
+        dummy_ipv4_cidr: 192.0.2.0/29
+        dummy_ipv6_cidr: 2001:db8::/126
+        dummy_isolation_ingress_zones: []
+
+    - name: validate configuration with isolation disabled
+      ansible.builtin.meta: flush_handlers
+
+    - name: inspect role policies after disabling isolation
+      ansible.builtin.stat:
+        path: "/etc/firewalld/policies/{{ item }}.xml"
+      loop: [dummy-deny-host, dummy-deny-fwd]
+      register: dummy_test_disabled_policies
+
+    - name: inspect the foreign policy after disabling isolation
+      ansible.builtin.stat:
+        path: /etc/firewalld/policies/site-test.xml
+      register: dummy_test_preserved_policy
+
+    - name: verify disabling removes only owned policies
+      ansible.builtin.assert:
+        that:
+          - dummy_test_disabled_policies.results | selectattr('stat.exists') | list | length == 0
+          - dummy_test_preserved_policy.stat.checksum == dummy_test_foreign_policy.stat.checksum
+
+    - name: reenable isolation for only the external zone
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: 2
+        dummy_ipv4_cidr: 192.0.2.0/29
+        dummy_ipv6_cidr: 2001:db8::/126
+        dummy_isolation_ingress_zones: [external]
+
+    - name: validate the reenabled isolation configuration
+      ansible.builtin.meta: flush_handlers
+
+    - name: verify reenabling replaces the previous ingress selection
+      ansible.builtin.include_tasks: tasks/check-policies.yaml
+      vars:
+        dummy_expected_ingress: [external]
+        dummy_expected_destinations:
+          - [ipv4, 192.0.2.1/32]
+          - [ipv6, 2001:db8::1/128]
+          - [ipv4, 192.0.2.2/32]
+          - [ipv6, 2001:db8::2/128]
+
+    - name: remove the optional policy directory from the test image
+      ansible.builtin.file:
+        path: /etc/firewalld/policies
+        state: absent
+
+    - name: run without an optional firewalld integration
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: 2
+        dummy_ipv4_cidr: 192.0.2.0/29
+        dummy_ipv6_cidr: 2001:db8::/126
+
+    - name: inspect the optional policy directory after standalone operation
+      ansible.builtin.stat:
+        path: /etc/firewalld/policies
+      register: dummy_test_standalone_directory
+
+    - name: verify the standalone role did not create a firewalld directory
+      ansible.builtin.assert:
+        that: not dummy_test_standalone_directory.stat.exists
+
+    - name: remove obsolete interface files as the caller
+      ansible.builtin.file:
+        path: "/etc/systemd/network/80-dummy1.{{ item }}"
+        state: absent
+      loop: [netdev, network]
+
+    - name: accept a smaller count after caller cleanup
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: 1
+        dummy_ipv4_cidr: 192.0.2.0/29
+        dummy_ipv6_cidr: 2001:db8::/126
+
+    - name: inspect removed interface files after the safe reduction
+      ansible.builtin.stat:
+        path: "/etc/systemd/network/80-dummy1.{{ item }}"
+      loop: [netdev, network]
+      register: dummy_test_extra_interfaces
+
+    - name: verify the smaller count did not recreate obsolete files
+      ansible.builtin.assert:
+        that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0

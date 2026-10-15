@@ -1,0 +1,19 @@
+---
+- name: reject invalid dummy input
+  block:
+    - name: try invalid dummy input
+      ansible.builtin.include_role:
+        name: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
+      vars:
+        dummy_number: "{{ dummy_invalid_case.number | default(1) }}"
+        dummy_ipv4_cidr: "{{ dummy_invalid_case.ipv4 | default('10.254.254.1/24') }}"
+        dummy_ipv6_cidr: "{{ dummy_invalid_case.ipv6 | default('fdb9:e835:7db0:3056::/64') }}"
+        dummy_isolation_ingress_zones: "{{ dummy_invalid_case.zones | default(['public']) }}"
+
+    - name: fail if invalid dummy input was accepted
+      ansible.builtin.fail:
+        msg: dummy accepted invalid input
+  rescue:
+    - name: verify the expected input validation failed
+      ansible.builtin.assert:
+        that: dummy_invalid_case.error in (ansible_failed_result | to_json)

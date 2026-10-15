@@ -1,0 +1,22 @@
+---
+argument_specs:
+  main:
+    short_description: configure persistent dummy interfaces with optional firewalld isolation
+    options:
+      dummy_number:
+        type: int
+        default: 1
+        description: positive number of dummy interfaces to configure; reductions require caller removal of obsolete interfaces and their networkd files
+      dummy_ipv4_cidr:
+        type: str
+        default: 10.254.254.1/24
+        description: ipv4 address pool, allocated from the first address after its network address
+      dummy_ipv6_cidr:
+        type: str
+        default: fdb9:e835:7db0:3056::/64
+        description: ipv6 address pool, allocated from the first address after its network address
+      dummy_isolation_ingress_zones:
+        type: list
+        elements: str
+        default: [public]
+        description: named firewalld ingress zones denied access to dummy addresses; an empty list disables the role's isolation policies

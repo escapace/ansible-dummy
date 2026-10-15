@@ -10,8 +10,8 @@
 - name: validate dummy address pools
   ansible.builtin.assert:
     that:
-      - (dummy_ipv4_cidr | ansible.utils.ipaddr('ipv4')) != false
-      - (dummy_ipv6_cidr | ansible.utils.ipaddr('ipv6')) != false
+      - dummy_ipv4_cidr is string and '/' in dummy_ipv4_cidr and (dummy_ipv4_cidr | ansible.utils.ipaddr('version')) == 4
+      - dummy_ipv6_cidr is string and '/' in dummy_ipv6_cidr and (dummy_ipv6_cidr | ansible.utils.ipaddr('version')) == 6
     fail_msg: >-
       dummy_ipv4_cidr must be an IPv4 CIDR and dummy_ipv6_cidr must be an IPv6
       CIDR.
@@ -26,6 +26,24 @@
       The configured address pools do not contain enough addresses for
       dummy_number interfaces.
     quiet: true
+
+- name: validate dummy isolation ingress zones
+  ansible.builtin.assert:
+    that:
+      - dummy_isolation_ingress_zones is sequence
+      - dummy_isolation_ingress_zones is not string
+      - dummy_isolation_ingress_zones is not mapping
+      - dummy_isolation_ingress_zones | length == dummy_isolation_ingress_zones | unique(case_sensitive=true) | length
+    fail_msg: dummy_isolation_ingress_zones must be a list of unique zone names, or an empty list to disable isolation
+    quiet: true
+
+- name: require named dummy isolation ingress zones
+  ansible.builtin.assert:
+    that:
+      - item is string and item is regex('[A-Za-z0-9_-]+', match_type='fullmatch') and item not in ['ANY', 'HOST']
+    fail_msg: dummy_isolation_ingress_zones entries must be named firewalld zones, not ANY or HOST
+    quiet: true
+  loop: "{{ dummy_isolation_ingress_zones }}"
 
 - name: configure dummy interfaces
   ansible.builtin.include_tasks: dummy.yaml
