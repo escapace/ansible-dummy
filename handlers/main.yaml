@@ -1,37 +1,37 @@
 ---
 - name: dummy validate assembled firewalld configuration
+  listen: dummy reload firewalld
+
   ansible.builtin.command:
     argv: [firewall-offline-cmd, --system-config=/etc/firewalld, --check-config]
   register: dummy_firewalld_validation
   changed_when: false
-  check_mode: false
   failed_when: >-
     dummy_firewalld_validation.rc != 0 or
     dummy_firewalld_validation.stdout | trim | length > 0 or
     dummy_firewalld_validation.stderr | trim | length > 0
+  check_mode: false
   when: not ansible_check_mode
-  listen: dummy reload firewalld
-
 - name: dummy gather service facts before runtime effects
-  ansible.builtin.service_facts:
   listen:
     - dummy reload firewalld
     - dummy reload systemd-networkd
 
+  ansible.builtin.service_facts:
 - name: dummy reload active firewalld synchronously
+  listen: dummy reload firewalld
+
   ansible.builtin.command:
     argv: [firewall-cmd, --reload]
   changed_when: true
   when:
     - not ansible_check_mode
     - (ansible_facts.services | default({})).get('firewalld.service', {}).get('state') == 'running'
-  listen: dummy reload firewalld
-
 - name: dummy reload active systemd-networkd
+  listen: dummy reload systemd-networkd
   ansible.builtin.command:
     argv: [networkctl, reload]
   changed_when: true
   when:
     - not ansible_check_mode
     - (ansible_facts.services | default({})).get('systemd-networkd.service', {}).get('state') == 'running'
-  listen: dummy reload systemd-networkd

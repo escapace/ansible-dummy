@@ -22,11 +22,11 @@
     argv: [firewall-offline-cmd, --system-config=/etc/firewalld, --check-config]
   register: dummy_firewalld_preflight
   changed_when: false
-  check_mode: false
   failed_when: >-
     dummy_firewalld_preflight.rc != 0 or
     dummy_firewalld_preflight.stdout | trim | length > 0 or
     dummy_firewalld_preflight.stderr | trim | length > 0
+  check_mode: false
   when: dummy_firewalld_policy_directory.stat.isdir | default(false)
 
 - name: require existing dummy isolation ingress zones before writes
@@ -35,13 +35,13 @@
       - firewall-offline-cmd
       - --system-config=/etc/firewalld
       - "--info-zone={{ item }}"
-  loop: "{{ dummy_isolation_ingress_zones }}"
   register: dummy_firewalld_zone_validation
   changed_when: false
-  check_mode: false
   failed_when: >-
     dummy_firewalld_zone_validation.rc != 0 or
     dummy_firewalld_zone_validation.stderr | trim | length > 0
+  check_mode: false
+  loop: "{{ dummy_isolation_ingress_zones }}"
   when: dummy_firewalld_policy_directory.stat.isdir | default(false)
 
 - name: configure dummy isolation policies

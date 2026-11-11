@@ -1,11 +1,11 @@
 ---
-- name: predict dummy configuration changes without activation
+- gather_facts: false
   hosts: all
-  gather_facts: false
+  name: predict dummy configuration changes without activation
   roles:
     - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
       vars:
-        dummy_number: 2
         dummy_ipv4_cidr: 192.0.2.0/29
         dummy_ipv6_cidr: 2001:db8::/126
         dummy_isolation_ingress_zones: [external]
+        dummy_number: 2

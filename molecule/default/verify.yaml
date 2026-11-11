@@ -27,9 +27,9 @@
     - name: inspect unconfigured dummy interface files
       ansible.builtin.stat:
         path: "/etc/systemd/network/80-dummy1.{{ item }}"
-      loop: [netdev, network]
       register: dummy_test_extra_interfaces
 
+      loop: [netdev, network]
     - name: verify default addresses and unchanged check-mode state
       ansible.builtin.assert:
         that:
@@ -103,9 +103,9 @@
     - name: verify rejected integration did not create interface files
       ansible.builtin.stat:
         path: "/etc/systemd/network/80-dummy1.{{ item }}"
-      loop: [netdev, network]
       register: dummy_test_extra_interfaces
 
+      loop: [netdev, network]
     - name: confirm incomplete integration left network configuration unchanged
       ansible.builtin.assert:
         that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
@@ -154,9 +154,9 @@
     - name: inspect interface files after repeated firewalld rejections
       ansible.builtin.stat:
         path: "/etc/systemd/network/80-dummy1.{{ item }}"
-      loop: [netdev, network]
       register: dummy_test_extra_interfaces
 
+      loop: [netdev, network]
     - name: verify failed attempts did not create interface files
       ansible.builtin.assert:
         that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
@@ -202,9 +202,9 @@
     - name: read the alternate dummy network files
       ansible.builtin.slurp:
         src: "/etc/systemd/network/80-dummy{{ item }}.network"
-      loop: [0, 1]
       register: dummy_test_alternate_networks
 
+      loop: [0, 1]
     - name: verify address allocation for both interfaces
       ansible.builtin.assert:
         that:
@@ -260,9 +260,9 @@
     - name: read network configuration after rejected reductions
       ansible.builtin.slurp:
         src: "/etc/systemd/network/80-dummy{{ item }}.network"
-      loop: [0, 1]
       register: dummy_test_preserved_networks
 
+      loop: [0, 1]
     - name: verify rejected reductions did not change interface configuration
       ansible.builtin.assert:
         that: >-
@@ -294,9 +294,9 @@
     - name: inspect role policies after disabling isolation
       ansible.builtin.stat:
         path: "/etc/firewalld/policies/{{ item }}.xml"
-      loop: [dummy-deny-host, dummy-deny-fwd]
       register: dummy_test_disabled_policies
 
+      loop: [dummy-deny-host, dummy-deny-fwd]
     - name: inspect the foreign policy after disabling isolation
       ansible.builtin.stat:
         path: /etc/firewalld/policies/site-test.xml
@@ -369,9 +369,9 @@
     - name: inspect removed interface files after the safe reduction
       ansible.builtin.stat:
         path: "/etc/systemd/network/80-dummy1.{{ item }}"
-      loop: [netdev, network]
       register: dummy_test_extra_interfaces
 
+      loop: [netdev, network]
     - name: verify the smaller count did not recreate obsolete files
       ansible.builtin.assert:
         that: dummy_test_extra_interfaces.results | selectattr('stat.exists') | list | length == 0
